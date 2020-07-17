@@ -1,6 +1,7 @@
 import os
 import functools
 from flask import Flask, render_template, redirect, request, url_for
+from werkzeug.utils import secure_filename
 from flask_cors import CORS, cross_origin
 from bson.objectid import ObjectId
 from pymongo import MongoClient
@@ -149,6 +150,20 @@ def edit_contact():
         contacts_col.find_one_and_update({'_id':ObjectId(Oid)},{'$set': {'phone_no': phone_no}})
 
     return 'Edit Complete'
+
+@app.route('/add_I')
+def add_i():
+    return render_template('AddFile.html')
+
+@app.route('/add_Image', methods=['POST'])
+def add_image():
+    ID = request.form['id']
+    password = request.form['password']
+    Image_file = request.files['File']
+    print(Image_file.filename)
+    #Image_file.save(secure_filename(Image_file.filename))
+    Image_file.save(os.path.join('files', secure_filename(Image_file.filename)))
+    return "Hello"
 
 if __name__ == '__main__':
     app.run(host = '0.0.0.0', port = 80)
