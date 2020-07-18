@@ -167,12 +167,23 @@ def add_i():
 def add_image():
     ID = request.form['id']
     password = request.form['password']
+
+    is_user = col.find({'id':ID,'password':password})
+    if not is_user.count():
+        return 'Can not find in user list'
+
     Image_file = request.files['File']
+    Image_binary = base64.b64encode(Image_file.read())
+
+    if not len(Image_binary):
+        return 'Please upload with file'
+
+    return 'hello'
     #Image_file.save(os.path.join('files', secure_filename(Image_file.filename)))
 
     #image file save in MongoDB with GridFS
     fs = GridFS(db, "image")
-    field = fs.put(Image_file, content_type = Image_file.content_type, filename = "test1.png")
+    field = fs.put(Image_binary, filename = "test1.png")
 
     return str(field)
 
@@ -187,7 +198,7 @@ def get_image():
     #fh.close()
 
     imgdata = base64.b64decode(imgstring)
-    filename = 'some_image.png'  # I assume you have a way of picking unique filenames
+    filename = 'some_image.jpg'  # I assume you have a way of picking unique filenames
     with open(filename, 'wb') as f:
         f.write(imgdata)
     return 'Hello'
