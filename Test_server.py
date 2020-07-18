@@ -20,7 +20,7 @@ db = client.test_users
 col = db.user_info
 contacts_col = db.contacts
 
-image_col = db.image
+gallery_col = db.gallery
 
 fs = GridFS(db)
 
@@ -178,14 +178,15 @@ def add_image():
     if not len(Image_binary):
         return 'Please upload with file'
 
-    return 'hello'
     #Image_file.save(os.path.join('files', secure_filename(Image_file.filename)))
 
     #image file save in MongoDB with GridFS
     fs = GridFS(db, "image")
-    field = fs.put(Image_binary, filename = "test1.png")
+    file_id = fs.put(Image_binary, filename = Image_file.filename)
+    
+    gallery_col.insert({'id':ID, 'password':password, 'fileID':file_id})
 
-    return str(field)
+    return "Upload Success"
 
 @app.route('/get_image')
 def get_image():
