@@ -2,7 +2,8 @@ import os
 import functools
 import codecs
 import base64
-from flask import Flask, render_template, redirect, request, url_for
+import json
+from flask import Flask, render_template, redirect, request, url_for, jsonify
 from werkzeug.utils import secure_filename
 from flask_cors import CORS, cross_origin
 from bson.objectid import ObjectId
@@ -178,31 +179,51 @@ def add_image():
     if not len(Image_binary):
         return 'Please upload with file'
 
+    #save file in server directory
     #Image_file.save(os.path.join('files', secure_filename(Image_file.filename)))
 
     #image file save in MongoDB with GridFS
     fs = GridFS(db, "image")
     file_id = fs.put(Image_binary, filename = Image_file.filename)
-    
+    #save Object Id with the user info.
     gallery_col.insert({'id':ID, 'password':password, 'fileID':file_id})
 
-    return "Upload Success"
+    return str(file_id)
 
-@app.route('/get_image')
+@app.route('/get_i')
+def get_i():
+    return render_template('getFile.html')
+
+@app.route('/get_image', methods = ['POST'])
 def get_image():
+
+    ID = request.form['id']
+    password = request.form['password']
+
+    is_user = col.find({'id':ID,'password':password})
+    if not is_user.count():
+        return 'Can not find in user list'
+
+    image_field_list = gallery_col.find({'id':ID,'password':password})
+
     fs = GridFS(db, "image")
-    file_i = fs.find_one({"filename":"test1.png"})
-    imgstring = file_i.read()
 
-    #fh = open("imageToSave.png", "wb")
-    #fh.write(result.decode('base64'))
-    #fh.close()
+    result = []
 
-    imgdata = base64.b64decode(imgstring)
-    filename = 'some_image.jpg'  # I assume you have a way of picking unique filenames
-    with open(filename, 'wb') as f:
-        f.write(imgdata)
-    return 'Hello'
+    for Img_field in image_field_list:
+        file_id = Img_field['fileID']
+        file_i = fs.get(file_id)
+        result.append({"file_id": str(file_id), "content":file_i.read()})
+
+        imgdata = base64.b64decode(file_i.read())
+        filename = 'some_image.jpg'  # I assume you have a way of picking unique filenames
+        with open(filename, 'wb') as f:
+            f.write(imgdata)
+
+    myResponse = {"files":result}
+    print (myResponse)
+    response = jsonify(myResponse)
+    return response
 
 if __name__ == '__main__':
     app.run(host = '0.0.0.0', port = 80)
