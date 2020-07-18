@@ -38,17 +38,31 @@ def sign_up():
 
 @app.route('/add_user', methods=['POST'])
 def add_user():
+    
+    myResponse = {"result": 0}
+
     ID = request.form['id']
     password = request.form['password']
+    username = request.form['username']
+
     is_already = col.find({"id":ID})
 
     for us in is_already:
         print(us)
 
     if is_already.count():
-        return 'Sign up Failed'
-    col.insert({'id':ID, 'password':password})
-    return 'Sign up Success'
+        myResponse["result"] = 2
+        response = jsonify(myResponse)
+        return response #'Sign up Failed'
+
+
+    col.insert({'id':ID, 'password':password, 'username': username})
+    myResponse["result"] = 1
+    myResponse["id"] = ID
+    myResponse["password"] = password
+    myResponse["username"] = username
+    response = jsonify(myResponse)
+    return response #'Sign up Success'
     
 @app.route('/login')
 def login():
@@ -56,16 +70,24 @@ def login():
 
 @app.route('/check_user', methods=['POST'])
 def check_user():
+
+    myResponse = {"result": 0}
+
     ID = request.form['id']
     password = request.form['password']
     is_already = col.find({'id':ID,'password':password})
 
-    for us in is_already:
-        print(us)
-
     if is_already.count():
-        return 'Login Success'
-    return 'Login Failed'
+        myResponse["result"] = 1
+        myResponse["id"] = ID
+        myResponse["password"] = password
+        myResponse["username"] = is_already[0]['username']
+        response = jsonify(myResponse)
+        return response #'Login Success'
+
+    myResponse["result"] = 2
+    response = jsonify(myResponse)
+    return response #'Login Failed'
 
 @app.route('/add_c')
 def add_c():
