@@ -1,10 +1,14 @@
 import os
 import functools
+import codecs
+import base64
 from flask import Flask, render_template, redirect, request, url_for
 from werkzeug.utils import secure_filename
 from flask_cors import CORS, cross_origin
 from bson.objectid import ObjectId
 from pymongo import MongoClient
+from gridfs import GridFS
+
 
 app = Flask(__name__)
 
@@ -15,6 +19,10 @@ db = client.test_users
 #user_info = client.test_users.user_info
 col = db.user_info
 contacts_col = db.contacts
+
+image_col = db.image
+
+fs = GridFS(db)
 
 for i in col.find():
     print(i)
@@ -160,10 +168,29 @@ def add_image():
     ID = request.form['id']
     password = request.form['password']
     Image_file = request.files['File']
-    print(Image_file.filename)
-    #Image_file.save(secure_filename(Image_file.filename))
-    Image_file.save(os.path.join('files', secure_filename(Image_file.filename)))
-    return "Hello"
+    #Image_file.save(os.path.join('files', secure_filename(Image_file.filename)))
+
+    #image file save in MongoDB with GridFS
+    fs = GridFS(db, "image")
+    field = fs.put(Image_file, content_type = Image_file.content_type, filename = "test1.png")
+
+    return str(field)
+
+@app.route('/get_image')
+def get_image():
+    fs = GridFS(db, "image")
+    file_i = fs.find_one({"filename":"test1.png"})
+    imgstring = file_i.read()
+
+    #fh = open("imageToSave.png", "wb")
+    #fh.write(result.decode('base64'))
+    #fh.close()
+
+    imgdata = base64.b64decode(imgstring)
+    filename = 'some_image.png'  # I assume you have a way of picking unique filenames
+    with open(filename, 'wb') as f:
+        f.write(imgdata)
+    return 'Hello'
 
 if __name__ == '__main__':
     app.run(host = '0.0.0.0', port = 80)
