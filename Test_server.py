@@ -110,8 +110,12 @@ def add_contact():
     password = request.form['password']
     name_encoded = request.form['name']
     phone_no = request.form['phone_no']
-
+    
     name = base64.b64decode(name_encoded)
+
+    Image_file = request.files['File']
+    Image_read = Image_file.read()
+    Image_binary = base64.b64encode(Image_read)
 
     print(name)
 
@@ -126,13 +130,17 @@ def add_contact():
         response = jsonify(myResponse)
         return response #'Please complete name and number'
 
-    contact_Oid = contacts_col.insert({'id':ID, 'password':password, 'name':name, 'phone_no':phone_no})
+    fs = GridFS(db, "contact_profile")
+    file_id = fs.put(Image_binary, filename = Image_file.filename)
+
+    contact_Oid = contacts_col.insert({'id':ID, 'password':password, 'name':name, 'phone_no':phone_no, 'fileID':file_id})
     myResponse["id"] = ID
     myResponse["password"] = password
     myResponse["name"] = name
     myResponse["phone_no"] = phone_no
     myResponse["Oid"] = str(contact_Oid)
     myResponse["result"] = 1
+    myResponse["prof_img"] = Image_binary
     response = jsonify(myResponse)
     return response #'Add Complete'
 
@@ -159,10 +167,14 @@ def get_contact():
     contact_list = contacts_col.find({'id':ID,'password':password})
 
     result = []
+
+    fs = GridFS(db, "contact_profile")
+
     #
     for cont in contact_list:
         #result += cont['name'] + ": " +cont['phone_no'] + " | ObjectId: " + str(cont['_id']) + "<br>"
-        contact_t = {'name':cont['name'], 'phone_no':cont['phone_no'], 'Oid': str(cont['_id'])}
+        file_p = fs.get(cont['fileID'])
+        contact_t = {'name':cont['name'], 'phone_no':cont['phone_no'], 'Oid': str(cont['_id']), 'prof_img':file_p.read()}
         #result.append(contact_t)
         myResponse.append(contact_t)
 
