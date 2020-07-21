@@ -108,8 +108,12 @@ def add_contact():
 
     ID = request.form['id']
     password = request.form['password']
-    name = request.form['name']
+    name_encoded = request.form['name']
     phone_no = request.form['phone_no']
+
+    name = base64.b64decode(name_encoded)
+
+    print(name)
 
     is_user = col.find({'id':ID,'password':password})
     if not is_user.count():
@@ -346,9 +350,11 @@ def add_todo():
     myResponse = {"result": 0}
     ID = request.form['id']
     password = request.form['password']
-    dowhat = request.form['dowhat']
+    dowhat_encoded = request.form['dowhat']
     month = request.form['month']
     day = request.form['day']
+
+    dowhat = base64.b64decode(dowhat_encoded)
 
     is_user = col.find({'id':ID,'password':password})
 
