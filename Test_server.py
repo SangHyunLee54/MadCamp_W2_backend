@@ -4,6 +4,7 @@ import codecs
 import base64
 import json
 import logging
+import PIL.Image as Image
 from flask import Flask, render_template, redirect, request, url_for, jsonify, current_app
 from werkzeug.utils import secure_filename
 from flask_cors import CORS, cross_origin
@@ -135,14 +136,16 @@ def get_c():
 @app.route('/get_contact', methods=['POST'])
 def get_contact():
 
-    myResponse = {"result": 0}
+    #myResponse = {"result": 0}
+    myResponse = []
+
 
     ID = request.form['id']
     password = request.form['password']
 
     is_user = col.find({'id':ID,'password':password})
     if not is_user.count():
-        myResponse["result"] = 2
+        #myResponse["result"] = 2
         response = jsonify(myResponse)
         return response #'Can not find in user list'
 
@@ -153,10 +156,12 @@ def get_contact():
     for cont in contact_list:
         #result += cont['name'] + ": " +cont['phone_no'] + " | ObjectId: " + str(cont['_id']) + "<br>"
         contact_t = {'name':cont['name'], 'phone_no':cont['phone_no'], 'Oid': str(cont['_id'])}
-        result.append(contact_t)
+        #result.append(contact_t)
+        myResponse.append(contact_t)
 
-    myResponse["contact_list"] = result
-    myResponse["result"] = 1
+
+    #myResponse["contact_list"] = result
+    #myResponse["result"] = 1
     response = jsonify(myResponse)
     return response
 
@@ -233,29 +238,48 @@ def add_i():
 
 @app.route('/add_Image', methods=['POST'])
 def add_image():
+
+    myResponse = {"result": 0}
+
     ID = request.form['id']
     password = request.form['password']
 
     is_user = col.find({'id':ID,'password':password})
     if not is_user.count():
         return 'Can not find in user list'
-
+    
     Image_file = request.files['File']
-    Image_binary = base64.b64encode(Image_file.read())
+
+    Image_read = Image_file.read()
+    
+    Image_binary = base64.b64encode(Image_read)
+
+    Image_decoded = base64.b64decode(Image_binary)
+
 
     if not len(Image_binary):
         return 'Please upload with file'
-
+    
     #save file in server directory
     #Image_file.save(os.path.join('files', secure_filename(Image_file.filename)))
-
-    #image file save in MongoDB with GridFS
+    #f = open("test_binary.png", "w")
+    #f.write(Image_read)
+    #f.close()
+    #f = open("test_encoded.txt", "w")
+    #f.write(Image_binary)
+    #f.close()
+    #f = open("test_decoded.png", "w")
+    #f.write(Image_decoded)
+    #f.close()
     fs = GridFS(db, "image")
     file_id = fs.put(Image_binary, filename = Image_file.filename)
     #save Object Id with the user info.
     gallery_col.insert({'id':ID, 'password':password, 'fileID':file_id})
 
-    return str(file_id)
+    myResponse["result"] = 1
+    myResponse["encoded"] = Image_binary
+    response = jsonify(myResponse)
+    return response
 
 @app.route('/get_i')
 def get_i():
@@ -282,15 +306,96 @@ def get_image():
         file_i = fs.get(file_id)
         result.append({"file_id": str(file_id), "content":file_i.read()})
 
-        imgdata = base64.b64decode(file_i.read())
-        filename = 'some_image.jpg'  # I assume you have a way of picking unique filenames
-        with open(filename, 'wb') as f:
-            f.write(imgdata)
+        #filename = 'some_image.jpg'  # I assume you have a way of picking unique filenames
+        #with open(filename, 'wb') as f:
+        #    f.write(imgdata)
 
     myResponse = {"files":result}
-    print (myResponse)
+    #print (myResponse)
+    response = jsonify(result)
+    return response
+
+    @app.route('/add_todo', methods=['POST'])
+def add_todo():
+    myResponse = {"result": 0}
+    ID = request.form['id']
+    password = request.form['password']
+    dowhat = request.form['dowhat']
+    month = request.form['month']
+    day = request.form['day']
+
+    is_user = col.find({'id':ID,'password':password})
+
+    if not is_user.count():
+        myResponse["result"] = 2
+        response = jsonify(myResponse)
+        return response #'Can not find in user list'
+
+    todo_Oid = todo_col.insert({'id':ID, 'password':password, 'dowhat':dowhat, 'month':month, 'day':day})
+
+    myResponse["id"] = ID
+    myResponse["password"] = password
+    myResponse["dowhat"] = dowhat
+    myResponse["month"] = month
+    myResponse["day"] = day
+    myResponse["Oid"] = str(todo_Oid)
+    myResponse["result"] = 1
+    response = jsonify(myResponse)
+
+    return response #'Add Complete'
+
+
+# @app.route('/get_c')
+
+# def get_c():
+
+#     return render_template('getContact.html')
+
+@app.route('/get_todo', methods=['POST'])
+def get_todo():
+    myResponse = []
+    ID = request.form['id']
+    password = request.form['password']
+    is_user = col.find({'id':ID,'password':password})
+
+    if not is_user.count():
+        response = jsonify(myResponse)
+        return response #'Can not find in user list'
+
+    todo_list = todo_col.find({'id':ID,'password':password})
+
+    for cont in todo_list:
+        todo_t = {'dowhat':cont['dowhat'], 'month':cont['month'], 'day':cont['day'], 'Oid': str(cont['_id'])}
+        myResponse.append(todo_t)
+
     response = jsonify(myResponse)
     return response
+
+
+@app.route('/del_todo', methods=['POST'])
+def delete_todo():
+    myResponse = {"result": 0}
+    ID = request.form['id']
+    password = request.form['password']
+    Oid = request.form['Oid']
+
+    is_user = col.find({'id':ID,'password':password})
+
+    if not is_user.count():
+        myResponse["result"] = 2
+        response = jsonify(myResponse)
+        return response #'Can not find in user list'
+
+    if not todo_col.find({'id':ID, 'password':password, '_id':ObjectId(Oid)}).count():
+        myResponse["result"] = 2
+        response = jsonify(myResponse)
+        return response #'Can not find Object'
+
+    todo_col.delete_one({'_id':ObjectId(Oid)})    
+    myResponse["result"] = 1
+    response = jsonify(myResponse)
+    return response #'Delete Complete'
+
 
 if __name__ == '__main__':
     app.run(host = '0.0.0.0', port = 80)
