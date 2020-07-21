@@ -215,7 +215,8 @@ def edit_contact():
     ID = request.form['id']
     password = request.form['password']
     Oid = request.form['Oid']
-    name = request.form['name']
+    name_encoded = request.form['name']
+    name = base64.b64decode(name_encoded)
     phone_no = request.form['phone_no']
 
     is_user = col.find({'id':ID,'password':password})
