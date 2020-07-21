@@ -25,6 +25,9 @@ contacts_col = db.contacts
 
 gallery_col = db.gallery
 
+todo_col = db.todos
+
+
 fs = GridFS(db)
 
 for i in col.find():
@@ -281,6 +284,29 @@ def add_image():
     response = jsonify(myResponse)
     return response
 
+
+@app.route('/del_i')
+def del_i():
+    return render_template('DeleteImage.html')
+
+@app.route('/del_image', methods=['POST'])
+def del_image():
+    ID = request.form['id']
+    password = request.form['password']
+    Oid = ObjectId(request.form['Oid'])
+    
+    is_file = gallery_col.find({'id':ID,'password':password, 'fileID':Oid})
+    if not is_file.count():
+        return 'Can not find in file list'
+
+    fs = GridFS(db, "image")
+    fs.delete(Oid)
+    gallery_col.delete_one({'fileID':Oid})
+    myResponse = {"result": 1}
+    response = jsonify(myResponse)
+    return response
+
+
 @app.route('/get_i')
 def get_i():
     return render_template('getFile.html')
@@ -315,7 +341,7 @@ def get_image():
     response = jsonify(result)
     return response
 
-    @app.route('/add_todo', methods=['POST'])
+@app.route('/add_todo', methods=['POST'])
 def add_todo():
     myResponse = {"result": 0}
     ID = request.form['id']
